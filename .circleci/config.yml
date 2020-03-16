@@ -40,7 +40,7 @@ jobs:
   build-runtime-python3.6.8-crawler:
     <<: *use_python368_docker
     steps:
-      - setup_remote_docker
+#      - setup_remote_docker
       - attach_workspace:
           at: .
       - restore_cache:

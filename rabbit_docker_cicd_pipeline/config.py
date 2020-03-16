@@ -15,6 +15,7 @@ Config 初始化的过程:
 """
 
 import os
+import sys
 import time
 import typing
 from datetime import datetime
@@ -512,3 +513,5 @@ class TagConfig(AbstractAppConfig):
         flag = self.run_docker_build()
         if flag:
             self.run_docker_push()
+        else:
+            sys.exit(1)

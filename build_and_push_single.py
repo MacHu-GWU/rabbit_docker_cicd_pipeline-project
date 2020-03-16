@@ -27,6 +27,15 @@ app = AppConfig(
     **app_config_data,
 )
 
+if CURRENT_RUNTIME == Runtime.circleci:
+    os.environ["AWS_DEFAULT_REGION"] = app.app_aws_region_dynamic
+elif CURRENT_RUNTIME == Runtime.aws_codebuild:
+    pass
+else:
+    os.environ["AWS_DEFAULT_PROFILE"] = app.app_aws_profile_dynamic
+    os.environ["AWS_DEFAULT_REGION"] = app.app_aws_region_dynamic
+
+
 if __name__ == "__main__":
     import sys
 

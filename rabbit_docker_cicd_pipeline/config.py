@@ -205,9 +205,6 @@ class AbstractAppConfig(BaseConfig):
         :rtype: BaseTagStateModel
         """
         if self._TagStateModel is None:
-            os.environ["AWS_DEFAULT_PROFILE"] = self.app_aws_profile_dynamic
-            os.environ["AWS_DEFAULT_REGION"] = self.app_aws_region_dynamic
-
             class TagStateModel(BaseTagStateModel):
                 class Meta:
                     region = self.app_aws_region_dynamic

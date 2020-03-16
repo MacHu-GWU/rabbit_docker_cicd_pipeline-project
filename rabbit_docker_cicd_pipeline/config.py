@@ -17,6 +17,7 @@ Config 初始化的过程:
 import os
 import time
 import typing
+from datetime import datetime
 
 import boto3
 import docker
@@ -28,6 +29,7 @@ from troposphere_mate import Sentinel, REQUIRED
 
 from . import exc
 from .logger import logger
+from .runtime import Runtime, CURRENT_RUNTIME
 from .md5 import get_dockerfile_md5
 from .state import BaseTagStateModel
 
@@ -95,7 +97,7 @@ class AbstractAppConfig(BaseConfig):
     repo_docker_hub_username = attr.ib(default=REQUIRED)
     repo_docker_hub_password = attr.ib(default=REQUIRED)
 
-    repo_aws_ecr_life_cycle_expire_days = AttrsClass.ib_int(default=365)
+    repo_aws_ecr_life_cycle_expire_days = attr.ib(default=365) # type: int
 
     repo_ci_service = attr.ib(default=REQUIRED)
     repo_circleci_orch_mode = attr.ib(default=REQUIRED)
@@ -107,6 +109,7 @@ class AbstractAppConfig(BaseConfig):
     tag_config_file = attr.ib(default="tag-config.json")
     tag_docker_file = attr.ib(default="Dockerfile")
     tag_smoke_test_file = attr.ib(default="smoke-test.sh")
+    tag_force_update_interval_in_seconds = attr.ib(default=REQUIRED) # type: int
 
     class Options(Constant):
         class RepoRegistry(Constant):
@@ -131,18 +134,18 @@ class AbstractAppConfig(BaseConfig):
 
     @property
     def app_aws_profile_dynamic(self):
-        if "CIRCLECI" in os.environ:
+        if CURRENT_RUNTIME == Runtime.circleci:
             return None
-        elif "CODEBUILD_BUILD_ID" in os.environ:
+        elif CURRENT_RUNTIME == Runtime.aws_codebuild:
             return None
         else:
             return self.app_aws_profile
 
     @property
     def app_aws_region_dynamic(self):
-        if "CIRCLECI" in os.environ:
+        if CURRENT_RUNTIME == Runtime.circleci:
             return None
-        elif "CODEBUILD_BUILD_ID" in os.environ:
+        elif CURRENT_RUNTIME == Runtime.aws_codebuild:
             return None
         else:
             return self.app_aws_region
@@ -409,9 +412,20 @@ class TagConfig(AbstractAppConfig):
     def is_up_to_date(self):
         try:
             tag_state = self.TagStateModel.get(self.tag_remote_identifier)
+            if tag_state.fingerprint == self.tag_fingerprint:
+                if tag_state.seconds_from_last_update <= self.tag_force_update_interval_in_seconds:
+                    return True
+                else:
+                    logger.show_in_cyan(f"elapsed time from last update longer than {self.tag_force_update_interval_in_seconds} seconds.")
+                    return False
+            else:
+                logger.show_in_cyan(f"fingerprint of the image changed.")
+                return False
         except self.TagStateModel.DoesNotExist:
+            logger.show_in_cyan(f"fingerprint info not found in dynamodb.")
             return False
 
+    #--- High level operation API ---
     def run_docker_build(self):
         """
 
@@ -424,9 +438,8 @@ class TagConfig(AbstractAppConfig):
             # use subprocess
             # subprocess.check_call(["docker", "build", "-t", self.tag_local_identifier, self.tag_root_dir])
             # use docker client
-            # docker_client = self.app_docker_client # type: docker.DockerClient
-            # docker_client.images.build(path=self.tag_root_dir, tag=self.tag_local_identifier, quiet=False)
-
+            docker_client = self.app_docker_client # type: docker.DockerClient
+            docker_client.images.build(path=self.tag_root_dir, tag=self.tag_local_identifier, quiet=False)
             logger.show_in_green("Success!", indent=1)
             return True
         except Exception as e:
@@ -462,4 +475,35 @@ class TagConfig(AbstractAppConfig):
                 logger.show_in_green("Success!", indent=1)
             except Exception as e:
                 logger.show_in_red(f"Failed! Error: {e}", indent=1)
-                return
+
+            logger.show_in_cyan("update dynamodb state ...")
+
+            now = datetime.utcnow()
+            try:
+                tag_state = self.TagStateModel.get(self.tag_remote_identifier)
+                tag_state.update(
+                    actions=[
+                        self.TagStateModel.fingerprint.set(self.tag_fingerprint),
+                        self.TagStateModel.last_update.set(str(now))
+                    ]
+                )
+            except self.TagStateModel.DoesNotExist:
+                tag_state = self.TagStateModel(
+                    identifier=self.tag_remote_identifier,
+                    fingerprint=self.tag_fingerprint,
+                    last_update=str(now),
+                )
+                tag_state.save()
+            except Exception as e:
+                raise e
+
+    def run_build_and_push(self):
+        if self.is_up_to_date():
+            logger.show_in_cyan(f"{self.tag_remote_identifier} is up to date.")
+            return
+
+        logger.show_in_cyan(f"{self.tag_remote_identifier} is NOT up to date.")
+
+        flag = self.run_docker_build()
+        if flag:
+            self.run_docker_push()

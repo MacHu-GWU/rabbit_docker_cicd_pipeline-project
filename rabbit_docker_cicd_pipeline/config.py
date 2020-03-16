@@ -144,7 +144,7 @@ class AbstractAppConfig(BaseConfig):
     @property
     def app_aws_region_dynamic(self):
         if CURRENT_RUNTIME == Runtime.circleci:
-            return None
+            return self.app_aws_region
         elif CURRENT_RUNTIME == Runtime.aws_codebuild:
             return None
         else:

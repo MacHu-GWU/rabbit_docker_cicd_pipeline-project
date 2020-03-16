@@ -1,0 +1,6 @@
+{
+    "repo_name": "rabbit-docker-runtime-bad-case2-invalid-registry",
+    "repo_registry": "in-valid-file",
+    "repo_ci_service": "circleci",
+    "repo_circleci_orch_mode": "single"
+}

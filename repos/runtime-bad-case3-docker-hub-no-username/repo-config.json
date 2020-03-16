@@ -1,0 +1,6 @@
+{
+    "repo_name": "rabbit-docker-runtime-bad-case3-docker-hub-no-username",
+    "repo_registry": "docker_hub",
+    "repo_ci_service": "circleci",
+    "repo_circleci_orch_mode": "single"
+}

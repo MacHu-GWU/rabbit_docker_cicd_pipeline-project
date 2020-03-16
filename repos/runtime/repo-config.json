@@ -1,0 +1,7 @@
+{
+    "repo_name": "rabbit-docker-runtime",
+    "repo_registry": "docker_hub",
+    "repo_docker_hub_username": "sanhe",
+    "repo_ci_service": "circleci",
+    "repo_circleci_orch_mode": "single"
+}

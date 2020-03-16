@@ -205,6 +205,14 @@ class AbstractAppConfig(BaseConfig):
         :rtype: BaseTagStateModel
         """
         if self._TagStateModel is None:
+            if CURRENT_RUNTIME == Runtime.circleci:
+                os.environ["AWS_DEFAULT_REGION"] = self.app_aws_region_dynamic
+            elif CURRENT_RUNTIME == Runtime.aws_codebuild:
+                pass
+            else:
+                os.environ["AWS_DEFAULT_PROFILE"] = self.app_aws_profile_dynamic
+                os.environ["AWS_DEFAULT_REGION"] = self.app_aws_region_dynamic
+
             class TagStateModel(BaseTagStateModel):
                 class Meta:
                     region = self.app_aws_region_dynamic

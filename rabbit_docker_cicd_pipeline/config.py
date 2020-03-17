@@ -438,6 +438,8 @@ class TagConfig(AbstractAppConfig):
         :rtype: bool
         :return: return a boolean flag indicate that the docker build successful
             or failed.
+
+        Raise except as soon as possible.
         """
         logger.show_in_cyan(f"Build `{self.tag_local_identifier}` at {self.tag_root_dir} ...")
         try:
@@ -450,10 +452,15 @@ class TagConfig(AbstractAppConfig):
             return True
         except Exception as e:
             logger.show_in_red(f"Failed! Error: {e}", indent=1)
+            raise e
             return False
 
     def run_docker_push(self):
+        """
+        Raise except as soon as possible.
+        """
         if self.repo_registry == self.Options.RepoRegistry.docker_hub:
+            # tag
             logger.show_in_cyan(f"Tag `{self.tag_local_identifier}` to `{self.tag_remote_identifier}` ...")
             docker_client = self.app_docker_client  # type: docker.DockerClient
             try:
@@ -462,8 +469,9 @@ class TagConfig(AbstractAppConfig):
                 logger.show_in_green("Success!", indent=1)
             except Exception as e:
                 logger.show_in_red(f"Failed! Error: {e}", indent=1)
-                return
+                raise e
 
+            # login
             logger.show_in_cyan(f"login to docker hub, username = `{self.repo_docker_hub_username}` ...")
             try:
                 docker_client.login(
@@ -473,17 +481,19 @@ class TagConfig(AbstractAppConfig):
                 logger.show_in_green("Success!", indent=1)
             except Exception as e:
                 logger.show_in_red(f"Failed! Error: {e}", indent=1)
-                return
+                raise e
 
+            # docker push
             logger.show_in_cyan(f"Push `{self.tag_remote_identifier}` to {self.repo_registry} ...")
             try:
                 docker_client.images.push(repository=self.repo_remote_identifier, tag=self.tag_name)
                 logger.show_in_green("Success!", indent=1)
             except Exception as e:
                 logger.show_in_red(f"Failed! Error: {e}", indent=1)
+                raise e
 
+            # update dynamodb state
             logger.show_in_cyan("update dynamodb state ...")
-
             now = datetime.utcnow()
             try:
                 tag_state = self.TagStateModel.get(self.tag_remote_identifier)
@@ -503,15 +513,17 @@ class TagConfig(AbstractAppConfig):
             except Exception as e:
                 raise e
 
-    def run_build_and_push(self):
+    def run_build_test_and_push(self):
         if self.is_up_to_date():
             logger.show_in_cyan(f"{self.tag_remote_identifier} is up to date.")
             return
 
         logger.show_in_cyan(f"{self.tag_remote_identifier} is NOT up to date.")
-
         flag = self.run_docker_build()
-        if flag:
+        if not flag:
+
+
+
             self.run_docker_push()
         else:
             sys.exit(1)

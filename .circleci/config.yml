@@ -36,7 +36,7 @@ jobs:
           paths:
             - 'venv'
   #--- Docker Image Tags build job ---
-  build-rabbit-docker-runtime-python3.6.8-crawler:
+  build-runtime-python3.6.8-crawler:
     <<: *use_python368_docker
     steps:
       - setup_remote_docker
@@ -49,10 +49,10 @@ jobs:
           command: |
             echo "enter virtualenv"
             . venv/bin/activate
-            python build_and_push_single.py repos/runtimepython3.6.8-crawler
+            python build_and_push_single.py repos/runtime/python3.6.8-crawler
           no_output_timeout: "30s"
   #--- Docker Image Tags build job ---
-  build-rabbit-docker-runtime-python3.7.7-crawler:
+  build-runtime-python3.7.7-crawler:
     <<: *use_python368_docker
     steps:
       - setup_remote_docker
@@ -65,7 +65,7 @@ jobs:
           command: |
             echo "enter virtualenv"
             . venv/bin/activate
-            python build_and_push_single.py repos/runtimepython3.7.7-crawler
+            python build_and_push_single.py repos/runtime/python3.7.7-crawler
           no_output_timeout: "30s"
 workflows:
   version: 2
@@ -76,11 +76,11 @@ workflows:
           requires:
             - pre_stage_check_out_source_code
       #--- Docker Image Tags build job ---
-      - build-rabbit-docker-runtime-python3.6.8-crawler:
+      - build-runtime-python3.6.8-crawler:
           requires:
             - pre_stage_build_python_environment
           context: sanhe-docker-hub
-      - build-rabbit-docker-runtime-python3.7.7-crawler:
+      - build-runtime-python3.7.7-crawler:
           requires:
             - pre_stage_build_python_environment
           context: sanhe-docker-hub

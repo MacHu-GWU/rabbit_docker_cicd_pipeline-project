@@ -41,7 +41,7 @@ jobs:
             - 'venv'
 {%- for tag in app.tags %}
   #--- Docker Image Tags build job ---
-  build-{{ tag.repo_name }}-{{ tag.tag_name}}:
+  build-{{ tag.repo_dirname }}-{{ tag.tag_dirname }}:
     <<: *use_python368_docker
     steps:
       - setup_remote_docker
@@ -56,7 +56,7 @@ jobs:
           command: |
             echo "enter virtualenv"
             . venv/bin/activate
-            python build_and_push_single.py repos/{{ tag.repo_dirname }}{{ tag.tag_dirname }}
+            python build_and_push_single.py repos/{{ tag.repo_dirname }}/{{ tag.tag_dirname }}
           no_output_timeout: "30s"
 {%- endfor %}
 workflows:
@@ -69,7 +69,7 @@ workflows:
             - pre_stage_check_out_source_code
       #--- Docker Image Tags build job ---
       {%- for tag in app.tags %}
-      - build-{{ tag.repo_name }}-{{ tag.tag_name}}:
+      - build-{{ tag.repo_dirname }}-{{ tag.tag_dirname }}:
           requires:
             - pre_stage_build_python_environment
           context: {{ app.repo_circleci_context_name }}

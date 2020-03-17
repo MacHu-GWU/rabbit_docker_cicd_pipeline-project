@@ -27,7 +27,7 @@ local_port="29876"
 container_port="29876"
 
 docker run --rm -dt --name "${container_name}" -p $local_port:$container_port "${repo_name}:${tag_name}" "${container_port}"
-sleep 2 # sleep 2 seconds wait web server become ready
+sleep 10 # sleep 2 seconds wait web server become ready
 
 echo "check if the web app successfully running locally"
 curl "http://localhost:${local_port}"

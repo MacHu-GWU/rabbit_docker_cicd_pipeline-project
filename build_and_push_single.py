@@ -10,9 +10,9 @@ HERE = Path(__file__).parent
 if __name__ == "__main__":
     import sys
 
-    tag_dir = "repos/runtime/python3.6.8-crawler"
+    # tag_dir = "repos/runtime/python3.6.8-crawler"
 
-    # tag_dir = sys.argv[1]
+    tag_dir = sys.argv[1]
 
     if Path(tag_dir).is_absolute():
         tag_root_dir = tag_dir

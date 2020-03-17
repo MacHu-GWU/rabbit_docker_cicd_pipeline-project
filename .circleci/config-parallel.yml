@@ -39,8 +39,8 @@ jobs:
           {%- endraw %}
           paths:
             - 'venv'
-{%- for tag in app.tags %}
   #--- Docker Image Tags build job ---
+{%- for tag in app.tags %}
   build-{{ tag.repo_dirname }}-{{ tag.tag_dirname }}:
     <<: *use_python368_docker
     steps:

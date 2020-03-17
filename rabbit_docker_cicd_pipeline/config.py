@@ -284,8 +284,7 @@ class AppConfig(AbstractAppConfig):
                         tag.absorb(repo)
                         tag.fill_na_with_default()
                         tag.validate()
-                        if not tag.is_up_to_date():
-                            self.tags.append(tag)
+                        self.tags.append(tag)
                     except Exception as e:
                         # print(e)
                         pass
@@ -301,7 +300,7 @@ class AppConfig(AbstractAppConfig):
             logger.show_in_cyan("No docker image REPOSITORIES detected.", indent=1)
 
         if len(self.tags):
-            logger.show_in_cyan("Detected these docker image TAGS to update:")
+            logger.show_in_cyan("Detected these docker image TAGS:")
             for tag in self.tags:
                 logger.show_in_cyan("- " + tag.tag_remote_identifier, indent=1)
         else:

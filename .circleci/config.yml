@@ -51,7 +51,6 @@ jobs:
             . venv/bin/activate
             python build_and_push_single.py repos/runtime/python3.6.8-crawler
           no_output_timeout: "30s"
-  #--- Docker Image Tags build job ---
   build-runtime-python3.7.7-crawler:
     <<: *use_python368_docker
     steps:
@@ -67,6 +66,21 @@ jobs:
             . venv/bin/activate
             python build_and_push_single.py repos/runtime/python3.7.7-crawler
           no_output_timeout: "30s"
+  build-webapp-python3.6.8-hello-world-flask-app:
+    <<: *use_python368_docker
+    steps:
+      - setup_remote_docker
+      - attach_workspace:
+          at: .
+      - restore_cache:
+          key: venv-{{ .Branch }}-{{ checksum "requirements.txt" }}
+      - run:
+          name:
+          command: |
+            echo "enter virtualenv"
+            . venv/bin/activate
+            python build_and_push_single.py repos/webapp/python3.6.8-hello-world-flask-app
+          no_output_timeout: "30s"
 workflows:
   version: 2
   my-workflow:
@@ -81,6 +95,10 @@ workflows:
             - pre_stage_build_python_environment
           context: sanhe-docker-hub
       - build-runtime-python3.7.7-crawler:
+          requires:
+            - pre_stage_build_python_environment
+          context: sanhe-docker-hub
+      - build-webapp-python3.6.8-hello-world-flask-app:
           requires:
             - pre_stage_build_python_environment
           context: sanhe-docker-hub

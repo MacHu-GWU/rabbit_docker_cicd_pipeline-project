@@ -23,8 +23,8 @@ check_exit_status() {
     fi
 }
 
-local_port="80"
-container_port="12345"
+local_port="29876"
+container_port="29876"
 
 docker run --rm -dt --name "${container_name}" -p $local_port:$container_port "${repo_name}:${tag_name}" "${container_port}"
 sleep 2 # sleep 2 seconds wait web server become ready

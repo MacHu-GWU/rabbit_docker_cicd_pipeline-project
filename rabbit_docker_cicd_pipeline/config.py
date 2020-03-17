@@ -22,16 +22,17 @@ from datetime import datetime
 
 import boto3
 import docker
-from attrs_mate import attr, AttrsClass, LazyClass
+from attrs_mate import attr, LazyClass
 from configirl import json_load
 from constant2 import Constant
+from invoke import run
 from pathlib_mate import Path
 from troposphere_mate import Sentinel, REQUIRED
 
 from . import exc
 from .logger import logger
-from .runtime import Runtime, CURRENT_RUNTIME
 from .md5 import get_dockerfile_md5
+from .runtime import Runtime, CURRENT_RUNTIME
 from .state import BaseTagStateModel
 
 
@@ -98,7 +99,7 @@ class AbstractAppConfig(BaseConfig):
     repo_docker_hub_username = attr.ib(default=REQUIRED)
     repo_docker_hub_password = attr.ib(default=REQUIRED)
 
-    repo_aws_ecr_life_cycle_expire_days = attr.ib(default=365) # type: int
+    repo_aws_ecr_life_cycle_expire_days = attr.ib(default=365)  # type: int
 
     repo_ci_service = attr.ib(default=REQUIRED)
     repo_circleci_orch_mode = attr.ib(default=REQUIRED)
@@ -110,7 +111,7 @@ class AbstractAppConfig(BaseConfig):
     tag_config_file = attr.ib(default="tag-config.json")
     tag_docker_file = attr.ib(default="Dockerfile")
     tag_smoke_test_file = attr.ib(default="smoke-test.sh")
-    tag_force_update_interval_in_seconds = attr.ib(default=REQUIRED) # type: int
+    tag_force_update_interval_in_seconds = attr.ib(default=REQUIRED)  # type: int
 
     class Options(Constant):
         class RepoRegistry(Constant):
@@ -422,7 +423,8 @@ class TagConfig(AbstractAppConfig):
                 if tag_state.seconds_from_last_update <= self.tag_force_update_interval_in_seconds:
                     return True
                 else:
-                    logger.show_in_cyan(f"elapsed time from last update longer than {self.tag_force_update_interval_in_seconds} seconds.")
+                    logger.show_in_cyan(
+                        f"elapsed time from last update longer than {self.tag_force_update_interval_in_seconds} seconds.")
                     return False
             else:
                 logger.show_in_cyan(f"fingerprint of the image changed.")
@@ -431,32 +433,47 @@ class TagConfig(AbstractAppConfig):
             logger.show_in_cyan(f"fingerprint info not found in dynamodb.")
             return False
 
-    #--- High level operation API ---
+    # --- High level operation API ---
     def run_docker_build(self):
         """
-
-        :rtype: bool
-        :return: return a boolean flag indicate that the docker build successful
-            or failed.
+        Run `docker build` command.
 
         Raise except as soon as possible.
         """
         logger.show_in_cyan(f"Build `{self.tag_local_identifier}` at {self.tag_root_dir} ...")
         try:
-            # use subprocess
-            # subprocess.check_call(["docker", "build", "-t", self.tag_local_identifier, self.tag_root_dir])
+            # use invoke
+            cmd = f"docker build -t {self.tag_local_identifier} {self.tag_root_dir}"
+            run(cmd)
+
             # use docker client
-            docker_client = self.app_docker_client # type: docker.DockerClient
-            docker_client.images.build(path=self.tag_root_dir, tag=self.tag_local_identifier, quiet=False)
+            # docker_client = self.app_docker_client  # type: docker.DockerClient
+            # docker_client.images.build(path=self.tag_root_dir, tag=self.tag_local_identifier, quiet=False)
+
             logger.show_in_green("Success!", indent=1)
-            return True
         except Exception as e:
             logger.show_in_red(f"Failed! Error: {e}", indent=1)
             raise e
-            return False
+
+    def run_smoke_test(self):
+        """
+        Run `bash smoke-test.sh`` shell script.
+
+        Raise except as soon as possible.
+        """
+        logger.show_in_cyan(f"run smoke test script `{self.tag_smoke_test_file_abspath}` ...")
+        try:
+            cmd = f"bash {self.tag_smoke_test_file_abspath}"
+            run(cmd)
+            logger.show_in_green("Success!", indent=1)
+        except Exception as e:
+            logger.show_in_red(f"Failed! Error: {e}", indent=1)
+            raise e
 
     def run_docker_push(self):
         """
+        Run `docker tag`, `docker login` and `docker push` command.
+
         Raise except as soon as possible.
         """
         if self.repo_registry == self.Options.RepoRegistry.docker_hub:
@@ -503,6 +520,7 @@ class TagConfig(AbstractAppConfig):
                         self.TagStateModel.last_update.set(str(now))
                     ]
                 )
+                logger.show_in_green("Success!", indent=1)
             except self.TagStateModel.DoesNotExist:
                 tag_state = self.TagStateModel(
                     identifier=self.tag_remote_identifier,
@@ -510,7 +528,9 @@ class TagConfig(AbstractAppConfig):
                     last_update=str(now),
                 )
                 tag_state.save()
+                logger.show_in_green("Success!", indent=1)
             except Exception as e:
+                logger.show_in_red("Failed!", indent=1)
                 raise e
 
     def run_build_test_and_push(self):
@@ -519,11 +539,7 @@ class TagConfig(AbstractAppConfig):
             return
 
         logger.show_in_cyan(f"{self.tag_remote_identifier} is NOT up to date.")
-        flag = self.run_docker_build()
-        if not flag:
+        self.run_docker_build()
+        self.run_smoke_test()
+        self.run_docker_push()
 
-
-
-            self.run_docker_push()
-        else:
-            sys.exit(1)

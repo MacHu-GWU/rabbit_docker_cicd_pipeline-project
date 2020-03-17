@@ -45,4 +45,4 @@ if __name__ == "__main__":
     tag.absorb(repo)
     tag.fill_na_with_default()
     tag.validate()
-    tag.run_build_and_push()
+    tag.run_build_test_and_push()

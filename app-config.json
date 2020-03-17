@@ -6,5 +6,5 @@
     "repo_aws_codebuild_orch_mode": "single",
     "repo_circleci_context_name": "sanhe-docker-hub",
     // 1 day = 86400, 14 days = 1,209,600, 30 days = 2,592,000
-    "tag_force_update_interval_in_seconds": 1
+    "tag_force_update_interval_in_seconds": 2592000
 }

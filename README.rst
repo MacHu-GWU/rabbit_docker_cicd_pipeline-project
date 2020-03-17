@@ -81,6 +81,29 @@ CircleCI vs AWS Code Build Pricing
 
 
 
+Performance Comparison
+------------------------------------------------------------------------------
+
+.. contents::
+    :depth: 1
+    :local:
 
 
+CircleCI Single Build
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+CircleCI Parallel Build
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+One Time Job:
+
+- Prepare Python Environment and Dependencies workspace: 30 seconds
+
+Parallel Job:
+
+- Restore workspace cache: 8s
+- Docker build test push: 0 ~ 300, or X (seconds)
+
+Total Time: 30 + 8N + X * N (seconds)
 

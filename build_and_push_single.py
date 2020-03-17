@@ -11,7 +11,7 @@ if __name__ == "__main__":
     import sys
 
     # tag_dir = "repos/runtime/python3.6.8-crawler"
-
+    # tag_dir = "repos/webapp/python3.6.8-hello-world-flask-app"
     tag_dir = sys.argv[1]
 
     if Path(tag_dir).is_absolute():

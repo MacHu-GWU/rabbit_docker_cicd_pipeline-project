@@ -1,7 +1,9 @@
 {
+    "app_name": "rabbit-docker-cicd-pipeline-sample",
     "app_aws_profile": "sanhe",
     "app_aws_region": "us-east-1",
     "app_dynamodb_table": "rabbit-docker-cicd-pipeline-sample-image-state",
+    "app_cft_bucket": "sanhe-admin-for-everything",
     "repo_circleci_orch_mode": "parallel",
     "repo_aws_codebuild_orch_mode": "single",
     "repo_circleci_context_name": "sanhe-docker-hub",

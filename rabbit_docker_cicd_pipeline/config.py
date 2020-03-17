@@ -19,6 +19,7 @@ import sys
 import time
 import typing
 from datetime import datetime
+import base64
 
 import boto3
 import docker
@@ -82,14 +83,15 @@ class BaseConfig(LazyClass):
 @attr.s
 class AbstractAppConfig(BaseConfig):
     # app level config
-    app_name = attr.ib(default=REQUIRED)
-    app_root_dir = attr.ib(default=REQUIRED)
-    app_config_file = attr.ib(default="app-config.json")
+    app_name = attr.ib(default=REQUIRED) # type: str
+    app_root_dir = attr.ib(default=REQUIRED) # type: str
+    app_config_file = attr.ib(default="app-config.json") # type: str
 
-    app_repos_dir = attr.ib(default=REQUIRED)
-    app_aws_profile = attr.ib(default=REQUIRED)
-    app_aws_region = attr.ib(default=REQUIRED)
-    app_dynamodb_table = attr.ib(default=REQUIRED)
+    app_repos_dir = attr.ib(default=REQUIRED) # type: str
+    app_aws_profile = attr.ib(default=REQUIRED) # type: str
+    app_aws_region = attr.ib(default=REQUIRED) # type: str
+    app_dynamodb_table = attr.ib(default=REQUIRED) # type: str
+    app_cft_bucket = attr.ib(default=REQUIRED) # type: str
 
     # repo level config
     repo_name = attr.ib(default=REQUIRED)
@@ -485,19 +487,19 @@ class TagConfig(AbstractAppConfig):
 
         Raise except as soon as possible.
         """
-        if self.repo_registry == self.Options.RepoRegistry.docker_hub:
-            # tag
-            logger.show_in_cyan(f"Tag `{self.tag_local_identifier}` to `{self.tag_remote_identifier}` ...")
-            docker_client = self.app_docker_client  # type: docker.DockerClient
-            try:
-                image = docker_client.images.get(name=self.tag_local_identifier)  # type: docker.i
-                image.tag(repository=self.repo_remote_identifier, tag=self.tag_name)
-                logger.show_in_green("Success!", indent=1)
-            except Exception as e:
-                logger.show_in_red(f"Failed! Error: {e}", indent=1)
-                raise e
+        # tag
+        logger.show_in_cyan(f"Tag `{self.tag_local_identifier}` to `{self.tag_remote_identifier}` ...")
+        docker_client = self.app_docker_client  # type: docker.DockerClient
+        try:
+            image = docker_client.images.get(name=self.tag_local_identifier)  # type: docker.i
+            image.tag(repository=self.repo_remote_identifier, tag=self.tag_name)
+            logger.show_in_green("Success!", indent=1)
+        except Exception as e:
+            logger.show_in_red(f"Failed! Error: {e}", indent=1)
+            raise e
 
-            # login
+        # login
+        if self.repo_registry == self.Options.RepoRegistry.docker_hub:
             logger.show_in_cyan(f"login to docker hub, username = `{self.repo_docker_hub_username}` ...")
             try:
                 docker_client.login(
@@ -508,39 +510,61 @@ class TagConfig(AbstractAppConfig):
             except Exception as e:
                 logger.show_in_red(f"Failed! Error: {e}", indent=1)
                 raise e
-
-            # docker push
-            logger.show_in_cyan(f"Push `{self.tag_remote_identifier}` to {self.repo_registry} ...")
+        elif self.repo_registry == self.Options.RepoRegistry.aws_ecr:
+            # To login AWS ECR with docker client, you need to call
+            # `ecr.get_authorization_token` api to get the username and password
+            # and you need to manually decode the token to restore the
+            # temp password for 24 hours. You have to explicitly pass the
+            # aws ecr endpoint as registry to `docker.login` api
+            logger.show_in_cyan(f"login to aws ecr ...")
+            ecr_client = self.app_boto_ses.client("ecr")
+            res = ecr_client.get_authorization_token()
+            token = res["authorizationData"][0]["authorizationToken"]
+            username, password = base64.b64decode(token.encode("utf-8")).decode("utf-8").split(":")
+            proxyEndpoint = res["authorizationData"][0]["proxyEndpoint"]
             try:
-                docker_client.images.push(repository=self.repo_remote_identifier, tag=self.tag_name)
+                docker_client.login(
+                    username=username,
+                    password=password,
+                    registry=proxyEndpoint,
+                )
                 logger.show_in_green("Success!", indent=1)
             except Exception as e:
                 logger.show_in_red(f"Failed! Error: {e}", indent=1)
                 raise e
 
-            # update dynamodb state
-            logger.show_in_cyan("update dynamodb state ...")
-            now = datetime.utcnow()
-            try:
-                tag_state = self.TagStateModel.get(self.tag_remote_identifier)
-                tag_state.update(
-                    actions=[
-                        self.TagStateModel.fingerprint.set(self.tag_fingerprint),
-                        self.TagStateModel.last_update.set(str(now))
-                    ]
-                )
-                logger.show_in_green("Success!", indent=1)
-            except self.TagStateModel.DoesNotExist:
-                tag_state = self.TagStateModel(
-                    identifier=self.tag_remote_identifier,
-                    fingerprint=self.tag_fingerprint,
-                    last_update=str(now),
-                )
-                tag_state.save()
-                logger.show_in_green("Success!", indent=1)
-            except Exception as e:
-                logger.show_in_red("Failed!", indent=1)
-                raise e
+        # docker push
+        logger.show_in_cyan(f"Push `{self.tag_remote_identifier}` to {self.repo_registry} ...")
+        try:
+            docker_client.images.push(repository=self.repo_remote_identifier, tag=self.tag_name)
+            logger.show_in_green("Success!", indent=1)
+        except Exception as e:
+            logger.show_in_red(f"Failed! Error: {e}", indent=1)
+            raise e
+
+        # update dynamodb state
+        logger.show_in_cyan("update dynamodb state ...")
+        now = datetime.utcnow()
+        try:
+            tag_state = self.TagStateModel.get(self.tag_remote_identifier)
+            tag_state.update(
+                actions=[
+                    self.TagStateModel.fingerprint.set(self.tag_fingerprint),
+                    self.TagStateModel.last_update.set(str(now))
+                ]
+            )
+            logger.show_in_green("Success!", indent=1)
+        except self.TagStateModel.DoesNotExist:
+            tag_state = self.TagStateModel(
+                identifier=self.tag_remote_identifier,
+                fingerprint=self.tag_fingerprint,
+                last_update=str(now),
+            )
+            tag_state.save()
+            logger.show_in_green("Success!", indent=1)
+        except Exception as e:
+            logger.show_in_red("Failed!", indent=1)
+            raise e
 
     def run_build_test_and_push(self):
         if self.is_up_to_date():

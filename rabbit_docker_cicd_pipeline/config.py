@@ -103,6 +103,7 @@ class AbstractAppConfig(BaseConfig):
 
     repo_ci_service = attr.ib(default=REQUIRED)
     repo_circleci_orch_mode = attr.ib(default=REQUIRED)
+    repo_circleci_context_name = attr.ib(default=REQUIRED)
     repo_aws_codebuild_orch_mode = attr.ib(default=REQUIRED)
 
     # tag level config
@@ -179,6 +180,10 @@ class AbstractAppConfig(BaseConfig):
         return docker.from_env()
 
     @property
+    def repo_dirname(self):
+        return Path(self.repo_root_dir).basename
+
+    @property
     def repo_local_identifier(self):
         return self.repo_name
 
@@ -190,6 +195,10 @@ class AbstractAppConfig(BaseConfig):
             return f"{self.app_aws_account_id}.dkr.ecr.{self.app_aws_region_dynamic}.amazonaws.com/{self.repo_name}"
         else:
             raise ValueError
+
+    @property
+    def tag_dirname(self):
+        return Path(self.tag_root_dir).basename
 
     @property
     def tag_local_identifier(self):

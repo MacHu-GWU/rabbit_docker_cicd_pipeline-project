@@ -23,7 +23,9 @@ jobs:
       - attach_workspace:
           at: .
       - restore_cache:
+          {%- raw %}
           key: venv-{{ .Branch }}-{{ checksum "requirements.txt" }}
+          {%- endraw %}
       - run:
           name: Create virtualenv, install dependencies
           command: |
@@ -32,41 +34,31 @@ jobs:
             pip install -r requirements.txt
             pip install -r requirements-test.txt
       - save_cache:
+          {%- raw %}
           key: venv-{{ .Branch }}-{{ checksum "requirements.txt" }}
+          {%- endraw %}
           paths:
             - 'venv'
+{%- for tag in app.tags %}
   #--- Docker Image Tags build job ---
-  build-rabbit-docker-runtime-python3.6.8-crawler:
+  build-{{ tag.repo_name }}-{{ tag.tag_name}}:
     <<: *use_python368_docker
     steps:
       - setup_remote_docker
       - attach_workspace:
           at: .
       - restore_cache:
+          {%- raw %}
           key: venv-{{ .Branch }}-{{ checksum "requirements.txt" }}
+          {%- endraw %}
       - run:
           name:
           command: |
             echo "enter virtualenv"
             . venv/bin/activate
-            python build_and_push_single.py repos/runtimepython3.6.8-crawler
+            python build_and_push_single.py repos/{{ tag.repo_dirname }}{{ tag.tag_dirname }}
           no_output_timeout: "30s"
-  #--- Docker Image Tags build job ---
-  build-rabbit-docker-runtime-python3.7.7-crawler:
-    <<: *use_python368_docker
-    steps:
-      - setup_remote_docker
-      - attach_workspace:
-          at: .
-      - restore_cache:
-          key: venv-{{ .Branch }}-{{ checksum "requirements.txt" }}
-      - run:
-          name:
-          command: |
-            echo "enter virtualenv"
-            . venv/bin/activate
-            python build_and_push_single.py repos/runtimepython3.7.7-crawler
-          no_output_timeout: "30s"
+{%- endfor %}
 workflows:
   version: 2
   my-workflow:
@@ -76,11 +68,9 @@ workflows:
           requires:
             - pre_stage_check_out_source_code
       #--- Docker Image Tags build job ---
-      - build-rabbit-docker-runtime-python3.6.8-crawler:
+      {%- for tag in app.tags %}
+      - build-{{ tag.repo_name }}-{{ tag.tag_name}}:
           requires:
             - pre_stage_build_python_environment
-          context: sanhe-docker-hub
-      - build-rabbit-docker-runtime-python3.7.7-crawler:
-          requires:
-            - pre_stage_build_python_environment
-          context: sanhe-docker-hub
+          context: {{ app.repo_circleci_context_name }}
+      {%- endfor %}

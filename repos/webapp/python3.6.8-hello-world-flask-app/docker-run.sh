@@ -12,11 +12,13 @@ fi
 dir_tag="${dir_here}"
 dir_repo="$(dirname ${dir_tag})"
 
-repo_name=$(cat ${dir_repo}/repo_name)
-tag_name=$(cat ${dir_tag}/tag_name)
+repo_name=$(cat ${dir_repo}/repo-config.json | jq '.repo_name' -r)
+tag_name=$(cat ${dir_tag}/tag-config.json | jq '.tag_name' -r)
 container_name="${repo_name}-${tag_name}-dev"
 
-docker run --rm -dt --name ${container_name} ${repo_name}:${tag_name}
+local_port="29876"
+container_port="29876"
+docker run --rm -dt --name "${container_name}" -p $local_port:$container_port "${repo_name}:${tag_name}" "0.0.0.0" "${container_port}"
 
 echo "run this command to enter the container:"
 echo

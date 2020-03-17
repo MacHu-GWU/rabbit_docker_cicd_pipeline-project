@@ -11,8 +11,8 @@ def hello():
 if __name__ == "__main__":
     import sys
 
-    if len(sys.argv) >= 2:
-        port = int(sys.argv[1])
-    else:
-        port = 80
-    app.run(host="0.0.0.0", port=port, debug=True)
+    host = sys.argv[1]
+    port = sys.argv[2]
+    port = int(port)
+    print(host, port)
+    app.run(host=host, port=port, debug=True)

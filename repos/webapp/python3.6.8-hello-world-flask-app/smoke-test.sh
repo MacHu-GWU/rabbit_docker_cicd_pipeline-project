@@ -25,12 +25,11 @@ check_exit_status() {
 
 local_port="29876"
 container_port="29876"
-
-docker run --rm -dt --name "${container_name}" -p $local_port:$container_port "${repo_name}:${tag_name}" "${container_port}"
-sleep 20 # sleep 2 seconds wait web server become ready
+docker run --rm -dt --name "${container_name}" -p $local_port:$container_port "${repo_name}:${tag_name}" "0.0.0.0" "${container_port}"
+sleep 10 # sleep 2 seconds wait web server become ready
 
 echo "check if the web app successfully running locally"
-curl "http://localhost:${local_port}"
+curl "http://127.0.0.1:${local_port}"
 check_exit_status $?
 echo "yes"
 

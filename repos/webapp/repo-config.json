@@ -1,0 +1,6 @@
+{
+    "repo_name": "rabbit-docker-webapp",
+    "repo_registry": "aws_ecr",
+    "repo_ci_service": "circleci",
+    "repo_circleci_orch_mode": "single"
+}

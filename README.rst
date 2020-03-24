@@ -48,7 +48,17 @@
 Welcome to ``rabbit_docker_cicd_pipeline`` Documentation
 ==============================================================================
 
-Documentation for ``rabbit_docker_cicd_pipeline``.
+Rabbit Docker CICD Pipeline is a Framework that allows you to automate Docker Image build, test and publish for arbitrary many Repositories and tags within a Single GitHub Repo. And you are free to choose using DockerHub for public docker image and AWS ECR for private docker image.
+
+
+How it Works
+------------------------------------------------------------------------------
+
+Let's 435049070792
+
+
+
+
 
 
 .. _install:

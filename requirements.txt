@@ -46,7 +46,7 @@ invoke==1.4.1
 
 # YAML Template
 MarkupSafe==1.1.1
-jinja2==2.11.1
+jinja2==2.11.3
 
 # Logging
 colorama==0.4.3
